@@ -1,0 +1,6 @@
+*.docx
+*.xlsx
+*.pptx
+*.pdf
+*.csv
+output_data.json

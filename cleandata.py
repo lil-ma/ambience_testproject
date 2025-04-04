@@ -14,6 +14,7 @@ from transformers import (
 import torch
 import re
 from openai import OpenAI
+import pandas as pd
 
 def chunk_text(text, max_chars=5000, overlap=10): #chunk text into smaller pieces to eventually feed through an llm. 
     # Split text into sentences (basic split using punctuation)
@@ -52,7 +53,7 @@ for idx, chunk in enumerate(chunks):
 
 def process_spreadsheet(input_file, json_output, doc_output_folder, header_names):
     # Step 1: Read the spreadsheet
-    df = pd.read_excel(input_file)
+    df = pd.read_json(input_file)
 
     # Initialize an empty list to store data for JSON
     json_data = []
@@ -164,7 +165,7 @@ def convert_transcript_to_script(transcript, model, processor):
 
 
 # Example usage
-input_file = r"C:\Users\Liliana\dev\Ambience_testproject\omissions_sample_encounters.xlsx"  # Input Excel file path
+input_file = r"C:\Users\Liliana\dev\Ambience_testproject\omissions_sample_encounters.json"  # Input Excel file path
 json_output = "output_data.json"  # Output JSON file path
 doc_output_folder = r"C:\Users\Liliana\dev\Ambience_testproject\word_documents_split"  # Folder to save the Word documents
 model_id="google/gemma-3-4b-it"
@@ -187,18 +188,27 @@ json_data = process_spreadsheet(
 #     script = convert_transcript_to_script(transcript['Transcript'], model, processor) #use local models for now because I'm cheap
 #     json_data[ind]['script'] = script
 
-
-
 client = OpenAI()
 
-completion = client.chat.completions.create(
-    model="gpt-4o-mini-2024-07-18",
-    messages=[
-        {
-            "role": "user",
-            "content": "Write a one-sentence bedtime story about a unicorn."
-        }
-    ]
-)
 
-print(completion.choices[0].message.content)
+for ind, encounter in enumerate(json_data):
+        summarized_chunks = []
+        for chunk in encounter['chunks_transcript']:
+            query  = f"""Summarize everything in the transcript. Do not fabricate anything, or leave anything out. 
+                Here is the transcript: {chunk}"""    
+            
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini-2024-07-18",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": query
+                    }
+                ]
+            )
+            print(completion.choices[0].message.content)
+            summarized_chunks.append(completion.choices[0].message.content)
+        json_data[ind]['summarized_chunks']=summarized_chunks
+
+    
+
